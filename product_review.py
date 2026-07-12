@@ -26,26 +26,41 @@ client = OpenAI(
     base_url = "https://api.groq.com/openai/v1"
 )
 
-response = client.responses.create(
-    model = "openai/gpt-oss-120b",
-    input = [
-        {
-            "role" : "developer",
-            "content" : "You are a Product reviewer. First, think of 2 strengths and 2 weaknesses of this product. Then, based on that thinking, give a rating from 0 to 100. Keep the final response short and clean."
-        },
-        {
-        "role" : "user",
-        "content" : "A food delivery app that predicts what a user might want to order based on past orders, weather, and time of day, then offers quick one tap reordering."
-        },  
-    ],
-    text = {
-            "format" : {
-            "type" : "json_schema",
-            "name" : "Product_reviwer",
-            "schema" : schema,
-            "strict" : True
+def get_review():
+    response = client.responses.create(
+        model = "openai/gpt-oss-120b",
+        input = [
+            {
+                "role" : "developer",
+                "content" : "You are a Product reviewer. First, think of 2 strengths and 2 weaknesses of this product. Then, based on that thinking, give a rating from 0 to 100. Keep the final response short and clean."
+            },
+            {
+            "role" : "user",
+            "content" : "A food delivery app that predicts what a user might want to order based on past orders, weather, and time of day, then offers quick one tap reordering."
+            },  
+        ],
+        text = {
+                "format" : {
+                "type" : "json_schema",
+                "name" : "Product_reviwer",
+                "schema" : schema,
+                "strict" : True
+                }
             }
-        }
-)
+    )
+    return response.output_text
 
-print(response.output_text)
+scores = []
+
+for i in range(5):
+    result = get_review()
+    review = Product.model_validate_json(result)
+    scores.append(review.rating)
+    print(f"Run {i+1}: {review.rating}")
+
+spread = max(scores) - min(scores)
+
+if spread <= 10:
+    print("PASS: scores are stable")
+else:
+    print("FAIL: scores vary too much")
